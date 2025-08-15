@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Job Board App</h1>
-            <label class="switch">
+            <h1>Job Board</h1>
+            <label class="switch" title="Toggle dark mode">
                 <input type="checkbox" id="darkModeToggle">
                 <span class="slider"></span>
             </label>
@@ -20,36 +20,41 @@
                 <input type="text" id="jobTitle" placeholder="Job Title">
                 <input type="text" id="jobDescription" placeholder="Job Description">
                 <div class="payer-search-container">
-                    <input type="text" id="payer" placeholder="Payer (User ID)" oninput="searchPayers()">
+                    <input type="text" id="payer" placeholder="Offer To (username)" oninput="searchPayers()">
                     <div id="payerSuggestions" class="suggestions"></div>
                 </div>
                 <select id="jobType">
-                    <option value="titjob" data-value="">Select a Job type</option>
-                    <option value="titjob" data-value="50">Titjob</option>
-                    <option value="nudes" data-value="30">Nudes</option>
-                    <option value="oral_sex" data-value="70">Oral Sex</option>
-                    <option value="penetration_sex" data-value="100">Penetration Sex</option>
-                    <option value="raw_sex" data-value="120">Raw Sex</option>
-                    <option value="thighjob" data-value="40">Thighjob</option>
-                    <option value="piss_play" data-value="60">Piss Play</option>
-                    <option value="lactation" data-value="80">Lactation</option>
-                    <option value="anal_sex" data-value="90">Anal Sex</option>
-                    <option value="blowjob" data-value="60">Blowjob</option>
-                    <option value="handjob" data-value="45">Handjob</option>
-                    <option value="foot_job" data-value="55">Foot Job</option>
-                    <option value="spanking" data-value="65">Spanking</option>
-                    <option value="role_play" data-value="75">Role Play</option>
-                    <option value="bondage" data-value="85">Bondage</option>
-                    <option value="masturbation" data-value="200">Masturbation Video</option>
+                    <option value="" data-value="">Select a Job type</option>
+                    <option value="photography" data-value="200">Masturbation Video</option>
+                    <option value="photography" data-value="200">Showcase - Breasts</option>
+                    <option value="photography" data-value="200">Showcase - Legs</option>
+                    <option value="photography" data-value="200">Showcase - Body</option>
+                    <option value="photography" data-value="75">Titjob</option>
+                    <option value="photography" data-value="250">Lactation</option>
+                    <option value="photography" data-value="150">Mutual Masturbation</option>
+                    <option value="photography" data-value="75">Handjob</option>
+                    <option value="photography" data-value="75">Footjob</option>
+                    <option value="photography" data-value="75">Thighjob</option>
+                    <option value="photography" data-value="100">Nudes</option>
+                    <option value="photography" data-value="450">Anal Sex</option>
+                    <option value="photography" data-value="450">Protected Sex</option>
+                    <option value="photography" data-value="450">Raw Sex</option>
                 </select>
                 <input type="number" id="estimatedValue" placeholder="Estimated Value (USD)" step="0.01" readonly>
                 <button onclick="addJob()">Add Job</button>
+                <p style="margin:6px 0 0;font-size:.9em;opacity:.8;">
+                    You must be logged in to create a job. When logged in, you'll only see jobs you offered or that were offered to you.
+                </p>
             </div>
+
             <div id="jobList"></div>
+            
             <div class="account-container">
                 <h2>Create Account</h2>
-                <input type="text" id="accountId" placeholder="Account ID">
-                <input type="text" id="accountName" placeholder="Name">
+                <input type="text" id="newUsername" placeholder="Username">
+                <input type="password" id="newPassword" placeholder="Password">
+                <input type="password" id="confirmPassword" placeholder="Confirm Password">
+                <input type="text" id="accountName" placeholder="Display Name">
                 <input type="number" id="bust" placeholder="Bust (inches)">
                 <input type="number" id="waist" placeholder="Waist (inches)">
                 <input type="number" id="hips" placeholder="Hips (inches)">
@@ -85,17 +90,34 @@
                 <input type="number" id="age" placeholder="Age">
                 <button onclick="createAccount()">Create Account</button>
             </div>
-            <div id="accountList"></div>
+
             <div class="login-container">
                 <h2>Login</h2>
-                <input type="text" id="loginId" placeholder="Account ID">
-                <input type="text" id="loginName" placeholder="Name">
+                <input type="text" id="loginUsername" placeholder="Username">
+                <input type="password" id="loginPassword" placeholder="Password">
                 <button onclick="login()">Login</button>
                 <button onclick="logout()">Logout</button>
                 <p id="loggedInUser"></p>
             </div>
+
+            <div class="admin-tools" style="margin-top:20px;">
+                <h3>Admin Tools</h3>
+                <button onclick="clearJobs()">Clear Jobs</button>
+                <button onclick="clearAccounts()">Clear Accounts</button>
+            </div>
         </main>
     </div>
+    
+    <!-- Custom message box -->
+    <div id="messageBox" class="message-box-container" style="display:none;">
+        <div class="message-box-content">
+            <p id="messageText"></p>
+            <div id="messageButtons" class="message-buttons">
+                <button id="messageOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

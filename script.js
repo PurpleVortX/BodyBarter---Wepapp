@@ -1,182 +1,391 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    const body = document.body;
-    const jobTypeSelect = document.getElementById('jobType');
-    const estimatedValueSpan = document.getElementById('estimatedValue');
+// ===== State =====
+let jobs = [];
+let accounts = [];
+let messageBoxCallback = null;
 
-    darkModeToggle.addEventListener('change', () => {
-        body.classList.toggle('dark-mode', darkModeToggle.checked);
-    });
+// ===== Utilities =====
+function $(id) { return document.getElementById(id); }
+
+function saveJobs() { localStorage.setItem('jobs', JSON.stringify(jobs)); }
+function loadJobs() {
+    try { jobs = JSON.parse(localStorage.getItem('jobs') || '[]'); } catch { jobs = []; }
+}
+
+function saveAccounts() { localStorage.setItem('accounts', JSON.stringify(accounts)); }
+function loadAccounts() {
+    try { accounts = JSON.parse(localStorage.getItem('accounts') || '[]'); } catch { accounts = []; }
+}
+
+function getLoggedInUser() {
+    const raw = localStorage.getItem('loggedInUser');
+    return raw ? JSON.parse(raw) : null;
+}
+
+function setLoggedInUser(user) {
+    localStorage.setItem('loggedInUser', JSON.stringify(user));
+}
+
+function clearLoggedInUser() {
+    localStorage.removeItem('loggedInUser');
+}
+
+function getAccountByUsername(username) {
+    return accounts.find(a => a.username === username) || null;
+}
+
+function getAccountById(id) {
+    return accounts.find(a => a.id === id) || null;
+}
+
+function nextAccountId() {
+    const key = 'accountIdCounter';
+    const n = parseInt(localStorage.getItem(key) || '1000', 10);
+    localStorage.setItem(key, String(n + 1));
+    return `U${n}`;
+}
+
+// Web Crypto SHA-256
+async function sha256(text) {
+    const enc = new TextEncoder();
+    const data = enc.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Custom Message Box instead of alert/confirm
+function showMessage(message, type = 'alert', onConfirm = null) {
+    const messageBox = $('messageBox');
+    const messageText = $('messageText');
+    const messageButtons = $('messageButtons');
+    
+    messageText.textContent = message;
+    messageButtons.innerHTML = '';
+    
+    if (type === 'confirm') {
+        const yesBtn = document.createElement('button');
+        yesBtn.textContent = 'Yes';
+        yesBtn.onclick = () => {
+            if (onConfirm) onConfirm(true);
+            messageBox.style.display = 'none';
+        };
+        const noBtn = document.createElement('button');
+        noBtn.textContent = 'No';
+        noBtn.onclick = () => {
+            if (onConfirm) onConfirm(false);
+            messageBox.style.display = 'none';
+        };
+        messageButtons.appendChild(yesBtn);
+        messageButtons.appendChild(noBtn);
+    } else {
+        const okBtn = document.createElement('button');
+        okBtn.textContent = 'OK';
+        okBtn.onclick = () => {
+            messageBox.style.display = 'none';
+        };
+        messageButtons.appendChild(okBtn);
+    }
+    
+    messageBox.style.display = 'flex';
+}
+
+// ===== DOM Ready =====
+document.addEventListener('DOMContentLoaded', () => {
+    loadAccounts();
+    loadJobs();
+
+    const jobTypeSelect = $('jobType');
+    const estimatedValueInput = $('estimatedValue');
+    const darkModeToggle = $('darkModeToggle');
 
     jobTypeSelect.addEventListener('change', () => {
         const selectedOption = jobTypeSelect.options[jobTypeSelect.selectedIndex];
-        estimatedValueSpan.textContent = selectedOption.getAttribute('data-value');
+        estimatedValueInput.value = selectedOption.getAttribute('data-value') || '';
     });
 
-    // Load logged-in user from local storage
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (loggedInUser) {
-        document.getElementById('loggedInUser').textContent = `Logged in as: ${loggedInUser.name} (ID: ${loggedInUser.id})`;
-    }
+    darkModeToggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+    });
+
+    const user = getLoggedInUser();
+    if (user) $('loggedInUser').textContent = `Logged in as: ${user.username} (${user.name})`;
+
+    renderJobs();
 });
 
-let jobs = [];
-
+// ===== Jobs =====
 function addJob() {
-    const jobTitle = document.getElementById('jobTitle').value;
-    const jobDescription = document.getElementById('jobDescription').value;
-    const payer = document.getElementById('payer').value;
-    const jobType = document.getElementById('jobType').value;
-    const estimatedValue = document.getElementById('estimatedValue').textContent;
+    const title = $('jobTitle').value.trim();
+    const description = $('jobDescription').value.trim();
+    const payerUsername = $('payer').value.trim();
+    const jobType = $('jobType').value;
+    const estimatedValue = $('estimatedValue').value;
 
-    if (jobTitle && jobDescription && payer && jobType && estimatedValue) {
-        const job = {
-            title: jobTitle,
-            description: jobDescription,
-            payer: payer,
-            type: jobType,
-            estimatedValue: estimatedValue
-        };
-        jobs.push(job);
-        renderJobs();
-        document.getElementById('jobTitle').value = '';
-        document.getElementById('jobDescription').value = '';
-        document.getElementById('payer').value = '';
-        document.getElementById('jobType').value = 'nudes';
-        estimatedValueSpan.textContent = '0';
+    const user = getLoggedInUser();
+    if (!user) { showMessage('You must be logged in to create a job.'); return; }
+
+    if (!title || !description || !payerUsername || !jobType || !estimatedValue) {
+        showMessage('Please fill in all fields.');
+        return;
     }
-}
 
-function renderJobs() {
-    const jobList = document.getElementById('jobList');
-    jobList.innerHTML = '';
+    const recipient = getAccountByUsername(payerUsername);
+    if (!recipient) { showMessage('Recipient username not found.'); return; }
 
-    jobs.forEach((job, index) => {
-        const jobItem = document.createElement('div');
-        jobItem.className = 'job-item';
-        jobItem.innerHTML = `
-            <h2>${job.title}</h2>
-            <p><strong>Description:</strong> ${job.description}</p>
-            <p><strong>Payer:</strong> ${job.payer}</p>
-            <p><strong>Type:</strong> ${job.type}</p>
-            <p><strong>Estimated Value:</strong> $${job.estimatedValue}</p>
-            <button onclick="removeJob(${index})">Remove</button>
-        `;
-        jobList.appendChild(jobItem);
-    });
-}
+    const job = {
+        id: Date.now().toString(),
+        title,
+        description,
+        type: jobType,
+        estimatedValue: Number(estimatedValue),
+        creatorId: user.id,
+        creatorUsername: user.username,
+        recipientUsername: recipient.username,
+        status: 'pending', // New status field
+        createdAt: new Date().toISOString()
+    };
 
-function removeJob(index) {
-    jobs.splice(index, 1);
+    jobs.push(job);
+    saveJobs();
+    clearJobFields();
     renderJobs();
 }
 
-let accounts = [];
-
-function createAccount() {
-    const accountId = document.getElementById('accountId').value;
-    const accountName = document.getElementById('accountName').value;
-    const bust = document.getElementById('bust').value;
-    const waist = document.getElementById('waist').value;
-    const hips = document.getElementById('hips').value;
-    const braSize = document.getElementById('braSize').value;
-    const gender = document.getElementById('gender').value;
-    const age = document.getElementById('age').value;
-
-    if (accountId && accountName && bust && waist && hips && braSize && gender && age) {
-        const newAccount = {
-            id: accountId,
-            name: accountName,
-            measurements: {
-                bust: bust,
-                waist: waist,
-                hips: hips
-            },
-            braSize: braSize,
-            gender: gender,
-            age: age
-        };
-        accounts.push(newAccount);
-        saveAccountsToFile();
-        clearAccountFields();
-    } else {
-        alert('Please fill in all fields.');
-    }
+function clearJobFields() {
+    $('jobTitle').value = '';
+    $('jobDescription').value = '';
+    $('payer').value = '';
+    $('payerSuggestions').innerHTML = '';
+    $('jobType').selectedIndex = 0;
+    $('estimatedValue').value = '';
 }
 
-function saveAccountsToFile() {
-    const options = {
-        types: [
-            {
-                description: 'JSON Files',
-                accept: { 'application/json': ['.json'] },
-            },
-        ],
-    };
+function renderJobs() {
+    const list = $('jobList');
+    list.innerHTML = '';
 
-    window.showSaveFilePicker(options).then(async (fileHandle) => {
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(accounts, null, 2));
-        await writable.close();
-        alert('Accounts saved successfully');
-    }).catch(err => {
-        console.error('Error saving file:', err);
+    const user = getLoggedInUser();
+    if (!user) {
+        const msg = document.createElement('div');
+        msg.className = 'job-item';
+        msg.innerHTML = '<p>Please log in to see your jobs.</p>';
+        list.appendChild(msg);
+        return;
+    }
+
+    const visible = jobs.filter(j => j.creatorUsername === user.username || j.recipientUsername === user.username);
+
+    if (visible.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'job-item';
+        empty.innerHTML = '<p>No jobs yet. Create one above or wait for offers.</p>';
+        list.appendChild(empty);
+        return;
+    }
+
+    visible.forEach(job => {
+        const creator = getAccountById(job.creatorId);
+        const recipient = getAccountByUsername(job.recipientUsername);
+        const creatorLabel = creator ? `${creator.name} (@${creator.username})` : `@${job.creatorUsername}`;
+        const recipientLabel = recipient ? `${recipient.name} (@${recipient.username})` : `@${job.recipientUsername}`;
+
+        const item = document.createElement('div');
+        item.className = 'job-item';
+        item.innerHTML = `
+            <h2>${job.title}</h2>
+            <p><strong>Description:</strong> ${job.description}</p>
+            <p><strong>Offered By:</strong> ${creatorLabel}</p>
+            <p><strong>Offered To:</strong> ${recipientLabel}</p>
+            <p><strong>Type:</strong> ${job.type}</p>
+            <p><strong>Estimated Value:</strong> $${job.estimatedValue}</p>
+            <p class="status-${job.status}"><strong>Status:</strong> ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</p>
+            <div class="job-actions">
+                ${user.id === job.creatorId && job.status === 'pending' ? `<button onclick="removeJob('${job.id}')" class="remove">Remove</button>` : ''}
+                ${user.username === job.recipientUsername && job.status === 'pending' ? `
+                    <button onclick="acceptJob('${job.id}')" class="accept">Accept</button>
+                    <button onclick="rejectJob('${job.id}')" class="reject">Reject</button>
+                ` : ''}
+            </div>
+        `;
+        list.appendChild(item);
     });
 }
 
-function clearAccountFields() {
-    document.getElementById('accountId').value = '';
-    document.getElementById('accountName').value = '';
-    document.getElementById('bust').value = '';
-    document.getElementById('waist').value = '';
-    document.getElementById('hips').value = '';
-    document.getElementById('braSize').value = '';
-    document.getElementById('gender').value = '';
-    document.getElementById('age').value = '';
+function acceptJob(jobId) {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+        job.status = 'accepted';
+        saveJobs();
+        renderJobs();
+        showMessage(`You have accepted the job: "${job.title}".`);
+    }
 }
 
-function searchPayers() {
-    const query = document.getElementById('payer').value.toLowerCase();
-    const suggestions = document.getElementById('payerSuggestions');
-    suggestions.innerHTML = '';
-
-    const filteredAccounts = accounts.filter(account =>
-        account.id.toLowerCase().includes(query) || account.name.toLowerCase().includes(query)
-    );
-
-    if (filteredAccounts.length > 0) {
-        filteredAccounts.forEach(account => {
-            const suggestion = document.createElement('div');
-            suggestion.className = 'suggestion';
-            suggestion.innerHTML = `${account.id} - ${account.name}`;
-            suggestion.onclick = () => {
-                document.getElementById('payer').value = account.id;
-                suggestions.innerHTML = '';
-            };
-            suggestions.appendChild(suggestion);
+function rejectJob(jobId) {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+        showMessage(`Are you sure you want to reject the job: "${job.title}"?`, 'confirm', (confirmed) => {
+            if (confirmed) {
+                job.status = 'rejected';
+                saveJobs();
+                renderJobs();
+                showMessage(`You have rejected the job: "${job.title}".`);
+            }
         });
-    } else {
-        suggestions.innerHTML = '<div class="suggestion">No matches found</div>';
     }
 }
 
-function login() {
-    const accountId = document.getElementById('loginId').value;
-    const accountName = document.getElementById('loginName').value;
+function removeJob(jobId) {
+    showMessage('Are you sure you want to clear this job?', 'confirm', (confirmed) => {
+        if (confirmed) {
+            const user = getLoggedInUser();
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+            if (!user || user.id !== job.creatorId) {
+                showMessage('Only the job creator can remove this job.');
+                return;
+            }
+            jobs = jobs.filter(j => j.id !== jobId);
+            saveJobs();
+            renderJobs();
+        }
+    });
+}
 
-    const account = accounts.find(a => a.id === accountId && a.name === accountName);
+// ===== Account Creation / Auth =====
+async function createAccount() {
+    const username = $('newUsername').value.trim();
+    const password = $('newPassword').value;
+    const confirmPassword = $('confirmPassword').value;
+    const name = $('accountName').value.trim();
+    const bust = $('bust').value;
+    const waist = $('waist').value;
+    const hips = $('hips').value;
+    const braSize = $('braSize').value;
+    const gender = $('gender').value;
+    const age = $('age').value;
 
-    if (account) {
-        localStorage.setItem('loggedInUser', JSON.stringify(account));
-        document.getElementById('loggedInUser').textContent = `Logged in as: ${account.name} (ID: ${account.id})`;
-        document.getElementById('loginId').value = '';
-        document.getElementById('loginName').value = '';
-    } else {
-        alert('Invalid account ID or name.');
+    if (!username || !password || !confirmPassword || !name || !bust || !waist || !hips || !braSize || !gender || !age) {
+        showMessage('Please fill in all fields.');
+        return;
     }
+    if (password !== confirmPassword) {
+        showMessage('Passwords do not match.');
+        return;
+    }
+    if (getAccountByUsername(username)) {
+        showMessage('Username is already taken.');
+        return;
+    }
+
+    const passwordHash = await sha256(password);
+
+    const account = {
+        id: nextAccountId(),
+        username,
+        passwordHash,
+        name,
+        measurements: { bust, waist, hips },
+        braSize,
+        gender,
+        age: Number(age)
+    };
+
+    accounts.push(account);
+    saveAccounts();
+
+    // Clear fields
+    $('newUsername').value = '';
+    $('newPassword').value = '';
+    $('confirmPassword').value = '';
+    $('accountName').value = '';
+    $('bust').value = '';
+    $('waist').value = '';
+    $('hips').value = '';
+    $('braSize').value = '';
+    $('gender').value = '';
+    $('age').value = '';
+
+    showMessage('Account created. You can log in now.');
+}
+
+async function login() {
+    const username = $('loginUsername').value.trim();
+    const password = $('loginPassword').value;
+    const account = getAccountByUsername(username);
+
+    if (!account) { showMessage('Invalid username or password.'); return; }
+
+    const passwordHash = await sha256(password);
+    if (passwordHash !== account.passwordHash) {
+        showMessage('Invalid username or password.'); return;
+    }
+
+    setLoggedInUser({ id: account.id, username: account.username, name: account.name });
+    $('loggedInUser').textContent = `Logged in as: ${account.username} (${account.name})`;
+    $('loginUsername').value = '';
+    $('loginPassword').value = '';
+    renderJobs();
 }
 
 function logout() {
-    localStorage.removeItem('loggedInUser');
-    document.getElementById('loggedInUser').textContent = '';
+    clearLoggedInUser();
+    $('loggedInUser').textContent = '';
+    renderJobs();
+}
+
+// ===== Payer Search with measurements =====
+function searchPayers() {
+    const query = $('payer').value.toLowerCase();
+    const suggestions = $('payerSuggestions');
+    suggestions.innerHTML = '';
+    if (!query) return;
+
+    const results = accounts.filter(a =>
+        a.username.toLowerCase().includes(query) ||
+        a.name.toLowerCase().includes(query)
+    );
+
+    if (results.length === 0) {
+        const el = document.createElement('div');
+        el.className = 'suggestion';
+        el.textContent = 'No matches found';
+        suggestions.appendChild(el);
+        return;
+    }
+
+    results.forEach(a => {
+        const { bust, waist, hips } = a.measurements || {};
+        const el = document.createElement('div');
+        el.className = 'suggestion';
+        el.innerHTML = `@${a.username} — ${a.name} | Bust: ${bust || '-'}" Waist: ${waist || '-'}" Hips: ${hips || '-'}"`;
+        el.onclick = () => {
+            $('payer').value = a.username;
+            suggestions.innerHTML = '';
+        };
+        suggestions.appendChild(el);
+    });
+}
+
+// ===== Admin Tools =====
+function clearJobs() {
+    showMessage('Are you sure you want to clear ALL jobs?', 'confirm', (confirmed) => {
+        if (confirmed) {
+            jobs = [];
+            saveJobs();
+            renderJobs();
+        }
+    });
+}
+
+function clearAccounts() {
+    showMessage('Are you sure you want to clear ALL accounts? This will also log you out.', 'confirm', (confirmed) => {
+        if (confirmed) {
+            accounts = [];
+            saveAccounts();
+            clearLoggedInUser();
+            $('loggedInUser').textContent = '';
+            renderJobs();
+        }
+    });
 }

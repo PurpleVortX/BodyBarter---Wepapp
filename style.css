@@ -115,6 +115,42 @@ input:checked + .slider:before {
     margin: 0 0 5px 0;
 }
 
+.job-item .status-pending {
+    color: orange;
+}
+
+.job-item .status-accepted {
+    color: green;
+}
+
+.job-item .status-rejected {
+    color: red;
+}
+
+.job-item button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 0.9em;
+}
+
+.job-item button.accept {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.job-item button.reject {
+    background-color: #f44336;
+    color: white;
+}
+
+.job-item button.remove {
+    background-color: #999;
+    color: white;
+}
+
 .dark-mode {
     background-color: #333;
     color: #fff;
@@ -291,35 +327,41 @@ input:checked + .slider:before {
     background-color: #444;
 }
 
-.account-container input, .account-container select, .account-container button {
+.message-box-container {
+    position: fixed;
+    left: 0;
+    top: 0;
     width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
 }
 
-.account-container button {
+.message-box-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.dark-mode .message-box-content {
+    background-color: #444;
+}
+
+.message-buttons {
+    margin-top: 10px;
+}
+
+.message-buttons button {
+    padding: 8px 16px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
     background-color: #2196F3;
     color: white;
-    border: none;
-    cursor: pointer;
-}
-
-.account-container button:hover {
-    background-color: #1e88e5;
-}
-
-.dark-mode .account-container input, .dark-mode .account-container select, .dark-mode .account-container button {
-    background-color: #555;
-    color: #fff;
-    border-color: #666;
-}
-
-.dark-mode .account-container button {
-    background-color: #333;
-}
-
-.dark-mode .account-container button:hover {
-    background-color: #444;
 }
