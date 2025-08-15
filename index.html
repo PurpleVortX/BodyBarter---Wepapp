@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BodyBarter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Job Board App</h1>
+            <label class="switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider"></span>
+            </label>
+        </header>
+        <main>
+            <div class="input-container">
+                <input type="text" id="jobTitle" placeholder="Job Title">
+                <input type="text" id="jobDescription" placeholder="Job Description">
+                <div class="payer-search-container">
+                    <input type="text" id="payer" placeholder="Payer (User ID)" oninput="searchPayers()">
+                    <div id="payerSuggestions" class="suggestions"></div>
+                </div>
+                <select id="jobType">
+                    <option value="titjob" data-value="">Select a Job type</option>
+                    <option value="titjob" data-value="50">Titjob</option>
+                    <option value="nudes" data-value="30">Nudes</option>
+                    <option value="oral_sex" data-value="70">Oral Sex</option>
+                    <option value="penetration_sex" data-value="100">Penetration Sex</option>
+                    <option value="raw_sex" data-value="120">Raw Sex</option>
+                    <option value="thighjob" data-value="40">Thighjob</option>
+                    <option value="piss_play" data-value="60">Piss Play</option>
+                    <option value="lactation" data-value="80">Lactation</option>
+                    <option value="anal_sex" data-value="90">Anal Sex</option>
+                    <option value="blowjob" data-value="60">Blowjob</option>
+                    <option value="handjob" data-value="45">Handjob</option>
+                    <option value="foot_job" data-value="55">Foot Job</option>
+                    <option value="spanking" data-value="65">Spanking</option>
+                    <option value="role_play" data-value="75">Role Play</option>
+                    <option value="bondage" data-value="85">Bondage</option>
+                    <option value="masturbation" data-value="200">Masturbation Video</option>
+                </select>
+                <input type="number" id="estimatedValue" placeholder="Estimated Value (USD)" step="0.01" readonly>
+                <button onclick="addJob()">Add Job</button>
+            </div>
+            <div id="jobList"></div>
+            <div class="account-container">
+                <h2>Create Account</h2>
+                <input type="text" id="accountId" placeholder="Account ID">
+                <input type="text" id="accountName" placeholder="Name">
+                <input type="number" id="bust" placeholder="Bust (inches)">
+                <input type="number" id="waist" placeholder="Waist (inches)">
+                <input type="number" id="hips" placeholder="Hips (inches)">
+                <select id="braSize">
+                    <option value="">Select Bra Size</option>
+                    <option value="30A">30A</option>
+                    <option value="30B">30B</option>
+                    <option value="30C">30C</option>
+                    <option value="30D">30D</option>
+                    <option value="32A">32A</option>
+                    <option value="32B">32B</option>
+                    <option value="32C">32C</option>
+                    <option value="32D">32D</option>
+                    <option value="34A">34A</option>
+                    <option value="34B">34B</option>
+                    <option value="34C">34C</option>
+                    <option value="34D">34D</option>
+                    <option value="36A">36A</option>
+                    <option value="36B">36B</option>
+                    <option value="36C">36C</option>
+                    <option value="36D">36D</option>
+                    <option value="38A">38A</option>
+                    <option value="38B">38B</option>
+                    <option value="38C">38C</option>
+                    <option value="38D">38D</option>
+                </select>
+                <select id="gender">
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+                <input type="number" id="age" placeholder="Age">
+                <button onclick="createAccount()">Create Account</button>
+            </div>
+            <div id="accountList"></div>
+            <div class="login-container">
+                <h2>Login</h2>
+                <input type="text" id="loginId" placeholder="Account ID">
+                <input type="text" id="loginName" placeholder="Name">
+                <button onclick="login()">Login</button>
+                <button onclick="logout()">Logout</button>
+                <p id="loggedInUser"></p>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
